@@ -13,6 +13,6 @@ icm20602 start -b 1 -R 4 -s start
 ist8310 start -I -b 2
 
 # Baro on internal I2C
-mpc2520 -I start
+mpc2520 start -I -b 4
 
 gps start -d /dev/ttyS0 -p ubx
