@@ -4,24 +4,23 @@ GIRBAL_Sim_Driver::GIRBAL_Sim_Driver() :
     ModuleParams(nullptr),
     ScheduledWorkItem(MODULE_NAME, px4::wq_configurations::test1)
 {
+    // hard coded coords are choosen from Irchelpark, Zurich as this is where jmavsim defaults to
+    anchor_nodes[1].lat = 473969840; // anchor1, bottom left
+    anchor_nodes[1].lon = 85413730;
+    anchor_nodes[1].alt = 490506;
+    anchor_nodes[2].lat = 473992560; // anchor2, top left
+    anchor_nodes[2].lon = 85427100;
+    anchor_nodes[2].alt = 490506;
+    anchor_nodes[3].lat = 473999640; // anchor3, top right
+    anchor_nodes[3].lon = 8.5474340;
+    anchor_nodes[3].alt = 490506;
+    anchor_nodes[4].lat = 473963450; // anchor4, bottom right
+    anchor_nodes[4].lon = 85452000;
+    anchor_nodes[4].alt = 490506;
 }
 
 bool GIRBAL_Sim_Driver::init()
 {
-    COORDS anchor_nodes[4]; //anchor nodes coordinates structure
-
-    // hard coded coords are choosen from Irchelpark, Zurich as this is where jmavsim defaults to
-    anchor_nodes[1].lat = 47.396984; // anchor1, bottom left
-    anchor_nodes[1].lon = 8.541373;
-    anchor_nodes[2].lat = 47.399256; // anchor2, top left
-    anchor_nodes[2].lon = 8.542710;
-    anchor_nodes[3].lat = 47.399964; // anchor3, top right
-    anchor_nodes[3].lon = 8.547434;
-    anchor_nodes[4].lat = 47.396345; // anchor4, bottom right
-    anchor_nodes[4].lon = 8.545200;
-
-    float distances[4];
-
     // execute Run() on every sensor_accel publication
     if (!sensor_gps_s.registerCallback()) {
         PX4_ERR("GPS data callback registration failed");
@@ -48,26 +47,29 @@ void GIRBAL_Sim_Driver::Run()
         COORDS currentPos;
 
 		if (sensor_gps_s.copy(&gpsPtr)) {
-			// TODO: take the bits of GPS we care about (lat & lon) and store them in a nice COORDS struct
+			// put coords subscriber receives into
+            currentPos.lat = gpsPtr->lat;
+            currentPos.lon = gpsPtr->lon;
+            currentPos.alt = gpsPtr->alt;
 
-
-            // TODO: run calculateDistances on that struct
-
+            // run calculateDistances on that struct
+            // the func will edit the distances array with the calculated distances
+            calculateDistances(currentPos, anchor_nodes, distances);
             // TODO: broadcast distances
+
 
 		}
 	}
 }
 
-void GIRBAL_Sim_Driver::calculateDistances(COORDS current_location, COORDS nodes[], float *distances[]) // current location should be coords struct and nodes should be array of coords structs
+void GIRBAL_Sim_Driver::calculateDistances(COORDS current_location, COORDS nodes[], int *distances[])
 {
-    int num_nodes = 4; // imo we may as well hardcode this as 4 for this module
-    for (int i = 0; i < num_nodes; i++)
+    for (int i = 0; i < 4; i++) //hardcoded for 4 base stations
     {
-        *distances[i] = sin(nodes[i].lat) * sin(current_location.lat) + cos(nodes[i].lat) * cos(current_location.lat) * cos(nodes[i].lat - current_location.lat);
-        *distances[i] = acos(*distances[i]);
-        *distances[i] = (6371 * M_PI * *distances[i]) / 180;
-    } // TODO: check this formula - see haversine formula
+        // formula for finding distance between 2 xyz coordinates
+        // Haversine formula not needed as curvature of earth negligible at this scale
+        *distances[i] = sqrt(pow(current_location.lat - nodes[i].lat, 2) + pow(current_location.lon - nodes[i].lon, 2) + pow(current_location.alt - nodes[i].alt, 2));
+    }
 }
 
 

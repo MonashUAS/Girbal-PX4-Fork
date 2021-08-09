@@ -23,26 +23,32 @@ using namespace time_literals;
 class GIRBAL_Sim_Driver : public ModuleBase<GIRBAL_Sim_Driver>, public ModuleParams, public px4::ScheduledWorkItem
 {
 public:
-    struct coordinates //input structure for coordinates from GPS data from sim
+    // Instance variables
+    struct coordinates // struct for passing 3D coords around the module
     {
-        float lat;
-        float lon;
+        int lat;
+        int lon;
+        int alt;
     };
     typedef struct coordinates COORDS;
+
+    COORDS anchor_nodes[4]; //anchor nodes coordinates structure
+
+    int *distances[4];
 
     GIRBAL_Sim_Driver(); // constructor
 
     ~GIRBAL_Sim_Driver() override; // destructor
 
-    void calculateDistances(COORDS current_location, COORDS nodes[], float *distances[]); // current location should be coords struct and nodes should be array of coords structs
+    void calculateDistances(COORDS current_location, COORDS nodes[], int *distances[]);
 
-    bool init();
+    bool init(); // unsure how this differs from the constructor
 
 private:
-    void Run() override;
+    void Run() override; // callback func
 
     // Publications
-	uORB::Publication<GIRBAL_anchor_distances_s> _anchor_distance_pub{ORB_ID(GIRBAL_anchor_distances)};
+	uORB::Publication<GIRBAL_anchor_distances_s> _anchor_distance_pub{ORB_ID(GIRBAL_anchor_distances)}; //
 
     // Subscriptions
     uORB::SubscriptionCallbackWorkItem sensor_gps_s{this, ORB_ID(vehicle_gps_position)};        // subscription that schedules WorkItemExample when updated
