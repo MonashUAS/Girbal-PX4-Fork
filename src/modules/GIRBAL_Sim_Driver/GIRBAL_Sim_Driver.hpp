@@ -24,15 +24,24 @@ class GIRBAL_Sim_Driver : public ModuleBase<GIRBAL_Sim_Driver>, public ModulePar
 {
 public:
     // Instance variables
-    struct coordinates // struct for passing 3D coords around the module
+    struct coordinates_gps // struct for passing 3D coords around the module
     {
         int lat;
         int lon;
         int alt;
     };
-    typedef struct coordinates COORDS;
+    typedef struct coordinates_gps gpsCOORDS;
 
-    COORDS anchor_nodes[4]; //anchor nodes coordinates structure
+    struct coordinates_xyz // struct for passing 3D coords around the module
+    {
+        int x;
+        int y;
+        int z;
+    };
+    typedef struct coordinates_xyz xyzCOORDS;
+
+    gpsCOORDS anchor_nodes_gps[4]; //anchor nodes coordinates structure
+    xyzCOORDS anchor_nodes_xyz[4];
 
     int *distances[4];
 
@@ -40,7 +49,9 @@ public:
 
     ~GIRBAL_Sim_Driver() override; // destructor
 
-    void calculateDistances(COORDS current_location, COORDS nodes[], int *distances[]);
+    void calculateDistances(gpsCOORDS current_location, xyzCOORDS nodes[], int *distances[]);
+
+    xyzCOORDS gps2ecef(gpsCOORDS gps);
 
     bool init(); // unsure how this differs from the constructor
 
