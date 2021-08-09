@@ -83,8 +83,8 @@ GIRBAL_Sim_Driver::xyzCOORDS GIRBAL_Sim_Driver::gps2ecef(gpsCOORDS gps)
 {
     // https://stackoverflow.com/questions/18759601/converting-lla-to-xyz
     // assuumes WSG-84 complicit implementation of jmavsim GPS
-    float R = 6378137*1e7;
-    float f_inv = 298.257224*1e7;
+    float R = 6378137*1e7; // radius of the earth
+    float f_inv = 298.257224*1e7; // magic
     float f = 1.0 / f_inv;
     float e2 = 1 - (1 - f) * (1 - f);
 

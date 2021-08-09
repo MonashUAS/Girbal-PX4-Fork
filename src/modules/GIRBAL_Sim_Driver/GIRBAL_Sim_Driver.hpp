@@ -40,7 +40,7 @@ public:
     };
     typedef struct coordinates_xyz xyzCOORDS;
 
-    gpsCOORDS anchor_nodes_gps[4]; //anchor nodes coordinates structure
+    gpsCOORDS anchor_nodes_gps[4]; // coords arrays to store our anchors (in both GPS and XYZ systems)
     xyzCOORDS anchor_nodes_xyz[4];
 
     int *distances[4];
