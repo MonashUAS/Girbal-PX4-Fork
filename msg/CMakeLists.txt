@@ -189,7 +189,9 @@ set(msg_files
 	wheel_encoders.msg
 	wind.msg
 	yaw_estimator_status.msg
+	# GIRBAL message definitions below
 	GIRBAL_anchor_distances.msg
+	GIRBAL_vehicle_pos.msg
 )
 
 if(NOT px4_constrained_flash_build)

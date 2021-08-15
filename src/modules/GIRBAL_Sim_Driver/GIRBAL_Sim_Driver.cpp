@@ -62,12 +62,14 @@ void GIRBAL_Sim_Driver::Run()
             // the func will edit the distances array with the calculated distances
             calculateDistances(currentPos, anchor_nodes_xyz, distances);
             // TODO: broadcast distances over publisher
-
+            // ** must ensure that ALL node distances are published when this func is called, either by publishing 4 separate messages, or converting the message definition
+            // to use arrays and publishing the lot in one message **
 
 		}
 	}
 }
 
+// NOTE: This function takes current location as GPS coords, and the node location as XYZ coords!
 void GIRBAL_Sim_Driver::calculateDistances(gpsCOORDS current_location, xyzCOORDS nodes[], int *distances[])
 {
     for (int i = 0; i < 4; i++) //hardcoded for 4 base stations
