@@ -64,9 +64,28 @@ void GIRBAL_Sim_Driver::Run()
             // TODO: broadcast distances over publisher
             // ** must ensure that ALL node distances are published when this func is called, either by publishing 4 separate messages, or converting the message definition
             // to use arrays and publishing the lot in one message **
+            publishDistances(distances);
 
 		}
 	}
+}
+
+void GIRBAL_Sim_Driver::publishDistances(int *distances[]) 
+{
+    struct GIRBAL_anchor_distances_s dist;
+	memset(&dist, 0, sizeof(dist));
+	orb_advert_t dist_pub = orb_advertise(ORB_ID(GIRBAL_anchor_distances), &dist);
+
+    for (int i = 0; i < 4, i++)
+    {
+        dist.anchor_id[i] = i;
+        dist.anchor_pos_x[i] = anchor_nodes_xyz[i].x;
+        dist.anchor_pos_y[i] = anchor_nodes_xyz[i].y;
+        dist.anchor_pos_z[i] = anchor_nodes_xyz[i].z;
+        dist.distance[i] = distances[i];
+    }
+
+    uorb_publish(ORB_ID(GIRBAL_anchor_distances), dist_pub, &dist);
 }
 
 // NOTE: This function takes current location as GPS coords, and the node location as XYZ coords!
