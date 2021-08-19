@@ -9,6 +9,7 @@
 #include <drivers/drv_hrt.h>
 #include <lib/perf/perf_counter.h>
 
+#include <uORB/uORB.h>
 #include <uORB/Publication.hpp>
 #include <uORB/Subscription.hpp>
 #include <uORB/SubscriptionCallback.hpp>
@@ -48,6 +49,8 @@ public:
     GIRBAL_Sim_Driver(); // constructor
 
     ~GIRBAL_Sim_Driver() override; // destructor
+
+    void publishDistances(int *distances[]);
 
     void calculateDistances(gpsCOORDS current_location, xyzCOORDS nodes[], int *distances[]);
 

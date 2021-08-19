@@ -79,6 +79,7 @@ set(msg_files
 	gimbal_manager_set_attitude.msg
 	gimbal_manager_set_manual_control.msg
 	gimbal_manager_status.msg
+	GIRBAL_anchor_distances.msg
 	gps_dump.msg
 	gps_inject_data.msg
 	heater_status.msg
