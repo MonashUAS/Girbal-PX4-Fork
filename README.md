@@ -1,4 +1,4 @@
-# PX4 Drone Autopilot
+# Project Girbal PX4 Autopilot Fork
 
 UAS Fork of the PX4 autopilot, with custom messages and modules for Project Girbal. Original repo can be found [here](https://github.com/PX4/PX4-Autopilot); official PX4 docs can be found [here](https://docs.px4.io/master/en/). Good luck xx
 
