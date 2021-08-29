@@ -25,14 +25,24 @@ class GIRBAL_Position_Calc : public ModuleBase<GIRBAL_Position_Calc>, public Mod
 {
 public:
     // Instance variables
-    struct coordinates_xyz // struct for passing 3D coords around the module
-    {
-        int x;
-        int y;
-        int z;
-    };
-    typedef struct coordinates_xyz xyzCOORDS;
 
+    // definitions
+    struct coordinates // struct for passing 3D coords
+    {
+        double x;
+        double y;
+        double z;
+    };
+    typedef struct coordinates COORDS;
+
+    struct coordinates_dist // struct for passing 3D coords with distance
+    {
+        COORDS coords;
+        double radius; // i.e. distance
+    };
+    typedef struct coordinates_dist COORDS_DIST;
+
+    COORDS polygonCalcCentre(COORDS[] vertices);
 
     GIRBAL_Position_Calc(); // constructor
 
