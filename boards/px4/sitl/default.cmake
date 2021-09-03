@@ -60,6 +60,9 @@ px4_add_board(
 		uuv_pos_control
 		vmount
 		vtol_att_control
+		#Add girbal modules below:
+		GIRBAL_Sim_Driver
+		#GIRBAL_Position_Calc
 	SYSTEMCMDS
 		#dumpfile
 		dyn

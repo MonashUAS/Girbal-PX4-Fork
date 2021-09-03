@@ -1,0 +1,16 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\boards",
+    "\\boards\\px4",
+    "\\boards\\px4\\sitl",
+    "\\src",
+    "\\src\\examples",
+    "\\src\\examples\\px4_simple_app",
+    "\\src\\modules",
+    "\\src\\modules\\GIRBAL_Position_Calc",
+    "\\src\\modules\\GIRBAL_Sim_Driver"
+  ],
+  "SelectedNode": "\\boards\\px4\\sitl\\default.cmake",
+  "PreviewInSolutionExplorer": false
+}
