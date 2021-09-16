@@ -11,9 +11,12 @@ UAS Fork of the PX4 autopilot, with custom messages and modules for Project Girb
 
 3. Download [qgroundcontrol](https://docs.qgroundcontrol.com/master/en/releases/daily_builds.html) in Windows land, which allows you to control the drone/send commands to the sim.
 
+## Developing for PX4
+The Girbal modules can be located in "/src/modules/GIRBAL_{module_name}", with the message definitions located in "/msg/GIRBAL_{msg_name}". Typically, each module will have a main .cpp file, a header file with definitions, and a CMakeLists.txt that tells the compiler about it. Message file are added as needed, and are used to communicate between modules. There are a plethora of predefined message files (read more about messaging [here](https://docs.px4.io/master/en/middleware/uorb.html)). 
+
 ## Fixing common issues
-If you're having random build issues not related to the code, the following may help. 
+If you're having random build issues not related to the code (can't help you with that, get gud :p), the following may help:
 
-`git submodule update --recursive`
+`git submodule update --recursive` - Runs a recursive update on any submodules in the repo
 
-`make distclean`
+`make distclean` - Cleans out any files associated with building the software
