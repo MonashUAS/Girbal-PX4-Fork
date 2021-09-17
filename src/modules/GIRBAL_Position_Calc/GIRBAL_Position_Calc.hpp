@@ -44,6 +44,10 @@ public:
 
     COORDS polygonCalcCentre(COORDS[] vertices);
 
+    COORDS calculateIntersection(double x1, double y1, double r1, double x2, double y2, double r2);
+
+    COORDS* calculateIntersections(COORDS_DIST[] circles);
+
     GIRBAL_Position_Calc(); // constructor
 
     GIRBAL_Position_Calc() override; // destructor

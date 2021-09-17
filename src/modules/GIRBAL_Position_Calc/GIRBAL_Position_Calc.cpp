@@ -44,8 +44,8 @@ void GIRBAL_Position_Calc::Run()
 
 COORDS GIRBAL_Position_Calc::calculateIntersection(double x1, double y1, double r1, double x2, double y2, double r2)
 {
-    COORDS intersection = { -0, -0 };
-    
+    COORDS intersection;
+
     //1. same circle
     if (x1 == x2 && y1 == y2 && r1 == r2)
     {
@@ -53,6 +53,7 @@ COORDS GIRBAL_Position_Calc::calculateIntersection(double x1, double y1, double 
     }
 
     double distance = sqrt(pow(x1 - x2, 2) + pow(y1 - y2, 2));
+
     //2. too far away
     if (distance > r1 + r2)
     {
@@ -69,38 +70,42 @@ COORDS GIRBAL_Position_Calc::calculateIntersection(double x1, double y1, double 
     }
 
 
-    Vector2d v;
-    v(0) = x2 - x1;
-    v(1) = y2 - y1;
+    COORDS v;
+    v.x = x2 - x1;
+    v.y = y2 - y1;
 
-    Vector2d A;
-    A(0) = x1;
-    A(1) = y1;
+    COORDS A;
+    A.x = x1;
+    A.y = y1;
 
-    Vector2d e1 = (1 / distance) * v;
+    COORDS e1;
+    e1.x = (1 / distance) * v.x;
+    e1.y = (1 / distance) * v.y;
 
     //4a. 1 solution
     if (yy == 0)
     {
-        Vector2d p = A + xx * e1;
-        
-        intersection = { p(0), p(1) };
+        COORDS p;
+        p.x = A.x + xx * e1.x;
+        p.y = A.y + xx * e1.y;
+
+        intersection = p;
 
         return intersection;
     }
 
     //4b. 2 solutions
-    Matrix2d rot;
-    rot(0, 0) = 0;
-    rot(0, 1) = -1;
-    rot(1, 0) = 1;
+    Matrix2d rot;       // NOT SURE HOW WE CAN DO THIS USING GIRBAL STRUCTS
+    rot(0, 0) = 0;      // might have to use vectors instead of structs?
+    rot(0, 1) = -1;     // or maybe we can decompose this into x and y components and multiply accordingly
+    rot(1, 0) = 1;      // from here down code is unchanged
     rot(1, 1) = 0;
 
-    Vector2d e2 = rot * e1;
+    COORDS e2;
+    e2 = rot * e1;
 
     Vector2d p1 = A + xx * e1 + yy * e2;
     Vector2d p2 = A + xx * e1 - yy * e2;
-
 
     return answer.pushback()
 
@@ -109,10 +114,11 @@ COORDS GIRBAL_Position_Calc::calculateIntersection(double x1, double y1, double 
 
 
 // formula can be found: https://www.xarg.org/2016/07/calculate-the-intersection-points-of-two-circles/
-COORDS[] GIRBAL_Position_Calc::calculateIntersections(COORDS_DIST circles[])
+COORDS* GIRBAL_Position_Calc::calculateIntersections(COORDS_DIST* circles)
 {
     int circleCount = sizeof(circles);
-    
+    COORDS ans;
+
     for (int i = 0; i < circleCount - 1;++i)
     {
         COORDS_DIST circle1 = circles[i];
@@ -120,13 +126,27 @@ COORDS[] GIRBAL_Position_Calc::calculateIntersections(COORDS_DIST circles[])
         for (int j = i + 1; j < circleCount;++j)
         {
             COORDS_DIST circle2 = circles[j];
-            calculateIntersection(circle1.coords.x, circle1.coords.y, circle1.radius, circle2.coords.x, circle2.coords.y, circle2.radius);
+            COORDS solution = calculateIntersection(circle1.coords.x, circle1.coords.y, circle1.radius, circle2.coords.x, circle2.coords.y, circle2.radius);
+
+            if (solution.size() == 1) // won't be able to use that on struct
+            {
+                Vector2d row = CalculateIntersection(circle1, circle2)[0];
+                ans.push_back(row);
+            }
+
+            if (solution.size() == 2)
+            {
+                Vector2d row1 = CalculateIntersection(circle1, circle2)[0];
+                Vector2d row2 = CalculateIntersection(circle1, circle2)[1];
+
+                ans.push_back(row1);
+                ans.push_back(row2);
+            }
         }
 
     }
+    return ans;
 }
-
-
 
 // modified from: https://stackoverflow.com/questions/2792443/finding-the-centroid-of-a-polygon
 // formula can be found: https://en.wikipedia.org/wiki/Centroid#Of_a_polygon
@@ -173,6 +193,7 @@ COORDS GIRBAL_Position_Calc::polygonCalcCentre(COORDS vertices[])
     return centroid;
 }
 
+/*
 Pos2dVec Trilateration::CalculateIntersection(PosAndDistance2d c1, PosAndDistance2d c2)
 {
     double x1 = c1.m_pos(0);
@@ -281,8 +302,7 @@ Pos2dVec Trilateration::CalculateIntersections(PosAndDistance2dVec circles)
     }
     return ans;
 }
-
-
+*/
 
 extern "C" __EXPORT int work_item_example_main(int argc, char *argv[]) // not really sure what this func does tbh
 {
