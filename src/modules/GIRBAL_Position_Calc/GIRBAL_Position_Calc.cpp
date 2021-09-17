@@ -55,8 +55,7 @@ COORDS GIRBAL_Position_Calc::polygonCalcCentre(COORDS vertices[])
     double a = 0.0;  // Partial signed area
 
     // For all vertices except last
-    int i=0;
-    for (i=0; i<vertexCount-1; ++i)
+    for (int i=0; i<vertexCount-1; ++i)
     {
         x0 = vertices[i].x;
         y0 = vertices[i].y;
