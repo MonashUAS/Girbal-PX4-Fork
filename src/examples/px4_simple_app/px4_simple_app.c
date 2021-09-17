@@ -50,22 +50,109 @@
 #include <uORB/uORB.h>
 #include <uORB/topics/vehicle_acceleration.h>
 #include <uORB/topics/vehicle_attitude.h>
+#include <uORB/topics/vehicle_gps_position.h>
+#include <uORB/topics/GIRBAL_anchor_distances.h>
+
 
 __EXPORT int px4_simple_app_main(int argc, char *argv[]);
+
+// Instance variables
+struct coordinates_gps // struct for passing 3D coords around the module
+{
+int lat;
+int lon;
+int alt;
+};
+
+struct coordinates_xyz // struct for passing 3D coords around the module
+{
+int x;
+int y;
+int z;
+};
+
+struct coordinates_gps anchor_nodes_gps[4]; // coords arrays to store our anchors (in both GPS and XYZ systems)
+struct coordinates_xyz anchor_nodes_xyz[4];
+
+double distances[4];
+
+struct coordinates_xyz gps2ecef(struct coordinates_gps gps)
+{
+    // https://stackoverflow.com/questions/18759601/converting-lla-to-xyz
+    // assuumes WSG-84 complicit implementation of jmavsim GPS
+    double R = 6378137; // radius of the earth
+    double f_inv = 298.257224; // magic (some sort of flattening ratio to translate 3D lat/lon onto a 2D plane)
+    double f = 1.0 / f_inv;
+    double f1 = 1.0 - f;
+    //double e2 = 1.0 - f1 * f1;
+
+    double cosLat = cos(gps.lat / 1e7 * M_PI / 180);
+    double sinLat = sin(gps.lat / 1e7 * M_PI / 180);
+
+    double cosLon = cos(gps.lon / 1e7 * M_PI / 180);
+    double sinLon = sin(gps.lon / 1e7 * M_PI / 180);
+
+    double c = 1 / sqrt(cosLat * cosLat + f1 * f1 * sinLat * sinLat);
+    double s = f1 * f1 * c;
+
+    struct coordinates_xyz xyzPos;
+
+    xyzPos.x = ((R*c + gps.alt/1000) * cosLat * cosLon);
+    xyzPos.y = ((R*c + gps.alt/1000) * cosLat * sinLon);
+    xyzPos.z = ((R*s + gps.alt/1000) * sinLat);
+
+    return xyzPos;
+}
+
+// NOTE: This function takes current location as GPS coords, and the node location as XYZ coords!
+/*void calculateDistances(struct coordinates_gps current_location, struct coordinates_xyz nodes[], double *dist_in[4])
+{
+    for (int i = 0; i < 4; i++) //hardcoded for 4 base stations
+    {
+	struct coordinates_xyz currentLocXYZ;
+        currentLocXYZ = gps2ecef(current_location);
+
+        // formula for finding distance between 2 xyz coordinates
+        *dist_in = sqrt(pow(currentLocXYZ.x - nodes[i].x, 2) + pow(currentLocXYZ.y - nodes[i].y, 2) + pow(currentLocXYZ.z - nodes[i].z, 2));
+	dist_in++;
+    }
+    //return dist_in;
+}*/
 
 int px4_simple_app_main(int argc, char *argv[])
 {
 	PX4_INFO("Hello Sky!");
 
+	// hard coded coords are choosen from Irchelpark, Zurich as this is where jmavsim defaults to
+	// as gps publisher uses int, coords are 1e7 greater than reality
+	anchor_nodes_gps[0].lat = 473963450; // anchor0, bottom right
+	anchor_nodes_gps[0].lon = 85452000;
+	anchor_nodes_gps[0].alt = 490506;
+	anchor_nodes_gps[1].lat = 473969840; // anchor1, bottom left
+	anchor_nodes_gps[1].lon = 85413730;
+	anchor_nodes_gps[1].alt = 490506;
+	anchor_nodes_gps[2].lat = 473992560; // anchor2, top left
+	anchor_nodes_gps[2].lon = 85427100;
+	anchor_nodes_gps[2].alt = 490506;
+	anchor_nodes_gps[3].lat = 473999640; // anchor3, top right
+	anchor_nodes_gps[3].lon = 85474340;
+	anchor_nodes_gps[3].alt = 490506;
+
+	for (int i = 0; i < 4; i++) // convert GPS base stations to XYZ in the constructor (I could definitely pre-calculate this but I'm lazy)
+	{
+		anchor_nodes_xyz[i] = gps2ecef(anchor_nodes_gps[i]);
+		distances[i] = 0;
+	}
+
 	/* subscribe to vehicle_acceleration topic */
-	int sensor_sub_fd = orb_subscribe(ORB_ID(vehicle_acceleration));
+	int sensor_sub_fd = orb_subscribe(ORB_ID(vehicle_gps_position));
 	/* limit the update rate to 5 Hz */
 	orb_set_interval(sensor_sub_fd, 200);
 
-	/* advertise attitude topic */
-	struct vehicle_attitude_s att;
-	memset(&att, 0, sizeof(att));
-	orb_advert_t att_pub = orb_advertise(ORB_ID(vehicle_attitude), &att);
+	//advertise attitude topic
+	struct GIRBAL_anchor_distances_s dist;
+	memset(&dist, 0, sizeof(dist));
+	orb_advert_t dist_pub = orb_advertise(ORB_ID(GIRBAL_anchor_distances), &dist);
 
 	/* one could wait for multiple topics with this technique, just using one here */
 	px4_pollfd_struct_t fds[] = {
@@ -99,22 +186,49 @@ int px4_simple_app_main(int argc, char *argv[])
 
 			if (fds[0].revents & POLLIN) {
 				/* obtained data for the first file descriptor */
-				struct vehicle_acceleration_s accel;
+				struct vehicle_gps_position_s accel;
 				/* copy sensors raw data into local buffer */
-				orb_copy(ORB_ID(vehicle_acceleration), sensor_sub_fd, &accel);
-				PX4_INFO("Accelerometer:\t%8.4f\t%8.4f\t%8.4f",
-					 (double)accel.xyz[0],
-					 (double)accel.xyz[1],
-					 (double)accel.xyz[2]);
+				orb_copy(ORB_ID(vehicle_gps_position), sensor_sub_fd, &accel);
+				PX4_INFO("Position:\t%8.4f\t%8.4f\t%8.4f",
+					 (double)accel.lat,
+					 (double)accel.lon,
+					 (double)accel.alt);
 
-				/* set att and publish this information for other apps
-				 the following does not have any meaning, it's just an example
-				*/
-				att.q[0] = accel.xyz[0];
-				att.q[1] = accel.xyz[1];
-				att.q[2] = accel.xyz[2];
+				struct coordinates_gps currentPos;
 
-				orb_publish(ORB_ID(vehicle_attitude), att_pub, &att);
+				// put coords subscriber receives into struct
+				currentPos.lat = accel.lat;
+				currentPos.lon = accel.lon;
+				currentPos.alt = accel.alt;
+
+				// run calculateDistances on that struct
+				// the func will edit the distances array with the calculated distances
+				//calculateDistances(currentPos, anchor_nodes_xyz, &distances);
+				struct coordinates_xyz currentLocXYZ;
+				currentLocXYZ = gps2ecef(currentPos);
+				for (int k = 0; k < 4; k++) //hardcoded for 4 base stations
+				{
+					// formula for finding distance between 2 xyz coordinates
+					distances[k] = sqrt(pow(currentLocXYZ.x - anchor_nodes_xyz[k].x, 2) + pow(currentLocXYZ.y - anchor_nodes_xyz[k].y, 2) + pow(currentLocXYZ.z - anchor_nodes_xyz[k].z, 2));
+				}
+
+
+				dist.timestamp = hrt_absolute_time();
+				for (int j = 0; j < 4; j++)
+				{
+					dist.anchor_id[j] = j;
+					dist.anchor_pos_x[j] = anchor_nodes_xyz[j].x;
+					dist.anchor_pos_y[j] = anchor_nodes_xyz[j].y;
+					dist.anchor_pos_z[j] = anchor_nodes_xyz[j].z;
+					dist.distance[j] = distances[j];
+					PX4_INFO("GIRBAL message:\t%8.4f\t%8.4f\t%8.4f\t%8.4f\t%8.4f",
+						(double)dist.anchor_id[j],
+						(double)dist.anchor_pos_x[j],
+						(double)dist.anchor_pos_y[j],
+						(double)dist.anchor_pos_z[j],
+						(double)dist.distance[j]);
+				}
+				orb_publish(ORB_ID(GIRBAL_anchor_distances), dist_pub, &dist);
 			}
 
 			/* there could be more file descriptors here, in the form like:

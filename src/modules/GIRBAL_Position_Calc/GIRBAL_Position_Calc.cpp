@@ -40,6 +40,94 @@ void GIRBAL_Position_Calc::Run()
 	}
 }
 
+
+
+COORDS GIRBAL_Position_Calc::calculateIntersection(double x1, double y1, double r1, double x2, double y2, double r2)
+{
+    COORDS intersection = { -0, -0 };
+    
+    //1. same circle
+    if (x1 == x2 && y1 == y2 && r1 == r2)
+    {
+        return intersection;
+    }
+
+    double distance = sqrt(pow(x1 - x2, 2) + pow(y1 - y2, 2));
+    //2. too far away
+    if (distance > r1 + r2)
+    {
+        return intersection;
+    }
+
+    double xx = (pow(r1, 2) - pow(r2, 2) + pow(distance, 2)) / (2 * distance);
+    double yy = sqrt(pow(r1, 2) - pow(xx, 2));
+
+    //3. one circle inside the other
+    if (r1 < abs(xx) || distance < abs(r2 - r1))
+    {
+        return intersection;
+    }
+
+
+    Vector2d v;
+    v(0) = x2 - x1;
+    v(1) = y2 - y1;
+
+    Vector2d A;
+    A(0) = x1;
+    A(1) = y1;
+
+    Vector2d e1 = (1 / distance) * v;
+
+    //4a. 1 solution
+    if (yy == 0)
+    {
+        Vector2d p = A + xx * e1;
+        
+        intersection = { p(0), p(1) };
+
+        return intersection;
+    }
+
+    //4b. 2 solutions
+    Matrix2d rot;
+    rot(0, 0) = 0;
+    rot(0, 1) = -1;
+    rot(1, 0) = 1;
+    rot(1, 1) = 0;
+
+    Vector2d e2 = rot * e1;
+
+    Vector2d p1 = A + xx * e1 + yy * e2;
+    Vector2d p2 = A + xx * e1 - yy * e2;
+
+
+    return answer.pushback()
+
+}
+
+
+
+// formula can be found: https://www.xarg.org/2016/07/calculate-the-intersection-points-of-two-circles/
+COORDS[] GIRBAL_Position_Calc::calculateIntersections(COORDS_DIST circles[])
+{
+    int circleCount = sizeof(circles);
+    
+    for (int i = 0; i < circleCount - 1;++i)
+    {
+        COORDS_DIST circle1 = circles[i];
+
+        for (int j = i + 1; j < circleCount;++j)
+        {
+            COORDS_DIST circle2 = circles[j];
+            calculateIntersection(circle1.coords.x, circle1.coords.y, circle1.radius, circle2.coords.x, circle2.coords.y, circle2.radius);
+        }
+
+    }
+}
+
+
+
 // modified from: https://stackoverflow.com/questions/2792443/finding-the-centroid-of-a-polygon
 // formula can be found: https://en.wikipedia.org/wiki/Centroid#Of_a_polygon
 COORDS GIRBAL_Position_Calc::polygonCalcCentre(COORDS vertices[])
@@ -84,6 +172,116 @@ COORDS GIRBAL_Position_Calc::polygonCalcCentre(COORDS vertices[])
 
     return centroid;
 }
+
+Pos2dVec Trilateration::CalculateIntersection(PosAndDistance2d c1, PosAndDistance2d c2)
+{
+    double x1 = c1.m_pos(0);
+    double y1 = c1.m_pos(1);
+    double r1 = c1.m_distance;
+
+    double x2 = c2.m_pos(0);
+    double y2 = c2.m_pos(1);
+    double r2 = c2.m_distance;
+
+    Pos2dVec a;
+
+
+    //1. same circle
+    if (x1 == x2 && y1 == y2 && r1 == r2)
+    {
+        return a;
+    }
+
+    double distance = sqrt(pow(x1 - x2, 2) + pow(y1 - y2, 2));
+    //2. too far away
+    if (distance > r1 + r2)
+    {
+        return a;
+    }
+
+    double xx = (pow(r1, 2) - pow(r2, 2) + pow(distance, 2)) / (2 * distance);
+    double yy = sqrt(pow(r1, 2) - pow(xx, 2));
+
+    //3. one circle inside the other
+    if (r1 < abs(xx) || distance < abs(r2 - r1))
+    {
+        return a;
+    }
+
+
+    Vector2d v;
+    v(0) = x2 - x1;
+    v(1) = y2 - y1;
+
+    Vector2d A;
+    A(0) = x1;
+    A(1) = y1;
+
+    Vector2d e1 = (1 / distance) * v;
+
+    //4a. 1 solution
+    if (yy == 0)
+    {
+        Vector2d p = A + xx * e1;
+        a.push_back(p);
+        return a;
+    }
+
+    //4b. 2 solutions
+    Matrix2d rot;
+    rot(0, 0) = 0;
+    rot(0, 1) = -1;
+    rot(1, 0) = 1;
+    rot(1, 1) = 0;
+
+    Vector2d e2 = rot * e1;
+
+    Vector2d p1 = A + xx * e1 + yy * e2;
+    Vector2d p2 = A + xx * e1 - yy * e2;
+
+    a.push_back(p1);
+    a.push_back(p2);
+
+    return a;
+
+
+}
+
+Pos2dVec Trilateration::CalculateIntersections(PosAndDistance2dVec circles)
+{
+    int count = circles.size();
+    Pos2dVec ans;
+
+    for (int i = 0; i < count - 1;++i)
+    {
+        PosAndDistance2d circle1 = circles[i];
+
+        for (int j = i + 1; j < count; ++j)
+        {
+            PosAndDistance2d circle2 = circles[j];
+
+            Pos2dVec solution = CalculateIntersection(circle1, circle2);
+
+            if (solution.size() == 1)
+            {
+                Vector2d row = CalculateIntersection(circle1, circle2)[0];
+                ans.push_back(row);
+            }
+
+            if (solution.size() == 2)
+            {
+                Vector2d row1 = CalculateIntersection(circle1, circle2)[0];
+                Vector2d row2 = CalculateIntersection(circle1, circle2)[1];
+
+                ans.push_back(row1);
+                ans.push_back(row2);
+            }
+
+        }
+    }
+    return ans;
+}
+
 
 
 extern "C" __EXPORT int work_item_example_main(int argc, char *argv[]) // not really sure what this func does tbh

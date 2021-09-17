@@ -2,7 +2,7 @@
 # copied from https://github.com/PX4/PX4-Autopilot/blob/master/src/examples/work_item/CMakeLists.txt
 
 px4_add_module(
-MODULE examples__GIRBAL_Sim_Driver
+MODULE modules__GIRBAL_Sim_Driver
 MAIN GIRBAL_Sim_Driver
 COMPILE_FLAGS
     #-DDEBUG_BUILD   # uncomment for PX4_DEBUG output
