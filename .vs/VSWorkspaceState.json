@@ -1,9 +1,7 @@
 {
   "ExpandedNodes": [
     "",
-    "\\boards",
-    "\\boards\\px4",
-    "\\boards\\px4\\sitl",
+    "\\msg",
     "\\src",
     "\\src\\examples",
     "\\src\\examples\\px4_simple_app",
@@ -11,6 +9,6 @@
     "\\src\\modules\\GIRBAL_Position_Calc",
     "\\src\\modules\\GIRBAL_Sim_Driver"
   ],
-  "SelectedNode": "\\boards\\px4\\sitl\\default.cmake",
+  "SelectedNode": "\\msg\\vehicle_gps_position.msg",
   "PreviewInSolutionExplorer": false
 }
