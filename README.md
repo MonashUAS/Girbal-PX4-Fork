@@ -16,8 +16,11 @@ The Girbal modules can be found in "/src/modules/GIRBAL_{module_name}", with the
 
 ## Modules
 1 <b>UWB Driver</b> - Interfaces with the UWB module (DWM1000) to provide send and receive functionality. Additionally, calculates node distances based on received UWB data. 
+
 1.5 <b>UWB Driver (Simulator)</b>  - A derivative of the first module that runs within the Jmavsim environment, using simualated GPS data in lieu of UWB data within the simulator.
+
 2 <b>Position Calculation</b>  - Converts the node distances calculated by the first module into a relative drone position that can be used for pathfinding.
+
 3 <b>Go Getter</b>  - Receives pathfinding goals from the algorithm and forwards them on to the PX4 autopilot. 
 
 ## Messages
