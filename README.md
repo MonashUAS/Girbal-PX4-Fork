@@ -21,7 +21,7 @@ The Girbal modules can be found in "/src/modules/GIRBAL_{module_name}", with the
 
 2 <b>Position Calculation</b>  - Converts the node distances calculated by the first module into a relative drone position that can be used for pathfinding.
 
-3 <b>Go Getter</b>  - Receives pathfinding goals from the algorithm and forwards them on to the PX4 autopilot. 
+3 <b>Go Getter</b>  - Receives pathfinding goals from the algorithm and forwards them on to the PX4 autopilot. Disregards waypoints with old timestamps
 
 ## Messages
 1. <b>Anchor Distances</b> - Contains an anchor ID, anchor XYZ position and its distance from the drone.
