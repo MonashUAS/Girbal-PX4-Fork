@@ -108,6 +108,9 @@ int main() {
     trilateration(P1,P2,P3,PT);
     cout << "lat = " << PT->lat << endl;
     cout << "lon = " << PT->lon << endl;
+    // lat = 37.419102373825389
+    // lon = -121.96057920839233
+
     return 0;
 }
 
