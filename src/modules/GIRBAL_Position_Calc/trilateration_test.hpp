@@ -19,7 +19,12 @@
 //#include <uORB/topics/vehicle_gps_position.h>
 //#include <uORB/topics/vehicle_status.h>
 
+#include <cmath>
+#include <iostream>
+
 using namespace time_literals;
+using namespace std;
+
 
 class GIRBAL_Position_Calc : public ModuleBase<GIRBAL_Position_Calc>, public ModuleParams, public px4::ScheduledWorkItem
 {
@@ -27,27 +32,17 @@ public:
     // Instance variables
 
     // definitions
-    struct coordinates // struct for passing 3D coords
-    {
-        double x;
-        double y;
-        double z;
+    struct COORDS {
+        double x = 0;
+        double y = 0;
+        double z = 0;
+        double r = 0;
     };
-    typedef struct coordinates COORDS;
 
-    struct coordinates_dist // struct for passing 3D coords with distance
-    {
-        COORDS coords;
-        double radius; // i.e. distance
-    };
-    typedef struct coordinates_dist COORDS_DIST;
-
-    COORDS polygonCalcCentre(COORDS[] vertices);
-
-    COORDS calculateIntersection(double x1, double y1, double r1, double x2, double y2, double r2);
-
-    COORDS* calculateIntersections(COORDS_DIST[] circles);
-    COORDS trilateration(&anchor_coords,&anchor_distances )
+    double dotProduct(COORDS* A, COORDS* B);                    // returns a number
+    void crossProduct(COORDS* A, COORDS* B, COORDS* P)          // returns a vector with structure COORDS
+    COORDS trilateration(COORDS* P1, COORDS* P2, COORDS* P3)    // performs trilateration using x,y,z coordinates of 3 nodes, and the respective distances from each node to the drone
+                                                                // calls dotProduct and crossProduct functions
 }
 
 

@@ -1,8 +1,6 @@
 #include <cmath>
 #include <iostream>
 using namespace std;
-int earthR = 6371;
-double pi = 2*acos(0.0);
 
 // struct for passing 3D coords
 // removed COORDS_DIST struct and instead just gave a radius attribute to the COORDS struct
@@ -13,11 +11,11 @@ struct COORDS {
     double r = 0;
 };
 
-// structure for outputting gps coordinates
-struct COORDS_gps {
-    double lat;
-    double lon;
-};
+// // structure for outputting gps coordinates
+// struct COORDS_gps {
+//     double lat;
+//     double lon;
+// };
 
 double dotProduct(COORDS* A, COORDS* B) {
     double product = (A->x) * (B->x) + (A->y) * (B->y) + (A->z) * (B->z);
@@ -30,7 +28,8 @@ void crossProduct(COORDS* A, COORDS* B, COORDS* P) {
     P->z = A->x * B->y - A->y * B->x;
 }
 
-COORDS_gps trilateration(COORDS* P1, COORDS* P2, COORDS* P3, COORDS_gps* PT) {
+COORDS trilateration(COORDS* P1, COORDS* P2, COORDS* P3) {
+
  // Redefined anchor node coordinates with P1 (the first anchor node) as the origin
     COORDS p1a, p2a, p3a, *P1a, *P2a, *P3a;
     P1a = &p1a; P2a = &p2a; P3a = &p3a;
@@ -52,13 +51,13 @@ COORDS_gps trilateration(COORDS* P1, COORDS* P2, COORDS* P3, COORDS_gps* PT) {
     // modified source code from https://gis.stackexchange.com/questions/66/trilateration-using-3-latitude-longitude-points-and-3-distances
 
     double d  = sqrt(pow(P2a->x,2) + pow(P2a->y,2) + pow(P2a->z,2));  // distance from origin to P2a
-    COORDS ex, *EX;  
+    COORDS ex, *EX;
     EX = &ex;                                                         // unit x vector (in direction of P2a)
     EX->x = (P2a->x) / d;
     EX->y = (P2a->y) / d;
     EX->z = (P2a->z) / d;
     double i  = dotProduct(EX, P3a);                                  // x coordinate for rotated P3
-    double ey_denom = sqrt( pow(P3a->x - i*(EX->x),2) + pow(P3a->y - i*(EX->y),2) + pow(P3a->z - i*(EX->z),2) ); 
+    double ey_denom = sqrt( pow(P3a->x - i*(EX->x),2) + pow(P3a->y - i*(EX->y),2) + pow(P3a->z - i*(EX->z),2) );
     COORDS ey, *EY;                                                   // unit y vector i think?? not sure what the fancy i*ex is for
     EY = &ey;
     EY->x = (P3a->x - i*EX->x) / ey_denom;
@@ -83,13 +82,13 @@ COORDS_gps trilateration(COORDS* P1, COORDS* P2, COORDS* P3, COORDS_gps* PT) {
 
     // convert back to lat/long from ECEF
     // convert to degrees
+    int earthR = 6371;
+    double pi = 2*acos(0.0);
+
     double lat = (asin(triPt->z / earthR)) * (180/pi);
     double lon = (atan2(triPt->y, triPt->x)) * (180/pi);
 
-    PT->lat = lat;
-    PT->lon = lon;
-
-    return *PT;
+    return *triPt;
 }
 
 int main() {
@@ -99,17 +98,30 @@ int main() {
     COORDS p3 = { .x = -2678.3846453910214, .y = -4292.945234069091, .z = 3871.2424244184303, .r = 0.0548954278262};
     COORDS *P1, *P2, *P3;
     P1 = &p1; P2 = &p2; P3 = &p3;
-    
-    // test gps output
-    COORDS_gps pt;
-    COORDS_gps *PT; 
+
+    COORDS pt, *PT;
     PT = &pt;
 
-    trilateration(P1,P2,P3,PT);
-    cout << "lat = " << PT->lat << endl;
-    cout << "lon = " << PT->lon << endl;
+    // // test gps output
+    // COORDS_gps pt;
+    // COORDS_gps *PT;
+    // PT = &pt;
+
+    *PT = trilateration(P1,P2,P3);
+    cout << "x = " << PT->x << endl;
+    cout << "y = " << PT->y << endl;
+    cout << "z = " << PT->z << endl;
+    // cout << "lat = " << PT->lat << endl;
+    // cout << "lon = " << PT->lon << endl;
     // lat = 37.419102373825389
     // lon = -121.96057920839233
+    int earthR = 6371;
+    double pi = 2*acos(0.0);
+    double lat = (asin(PT->z / earthR)) * (180/pi);
+    double lon = (atan2(PT->y, PT->x)) * (180/pi);
+
+    cout << "lat = " << lat << endl;
+    cout << "lon = " << lon << endl;
 
     return 0;
 }

@@ -2,9 +2,16 @@
 
 GIRBAL_Position_Calc::GIRBAL_Position_Calc() :
     ModuleParams(nullptr),
-    ScheduledWorkItem(MODULE_NAME, px4::wq_configurations::test1)
+    ScheduledWorkItem(MODULE_NAME, px4::wq_configurations::test1) // no idea what this is and can't find documentation for it
 {
 
+}
+
+// I assume this is the destructor?
+GIRBAL_Position_Calc::~GIRBAL_Position_Calc()
+{
+    perf_free(_loop_perf);
+	perf_free(_loop_interval_perf);
 }
 
 bool GIRBAL_Position_Calc::init()
@@ -23,286 +30,164 @@ bool GIRBAL_Position_Calc::init()
 
 void GIRBAL_Position_Calc::Run()
 {
+    PX4_INFO("RUN FUNCTION ENTERED");
     if (should_exit()) {
         ScheduleClear();
         exit_and_cleanup();
         return;
     }
 
+    // defined in destructor(?) near the start
+    perf_begin(_loop_perf);
+	perf_count(_loop_interval_perf);
+
+
     // "work" happens here on distances callback
-    if (GIRBAL_anchor_distances_s.updated()) {
-		GIRBAL_anchor_distances_s distPtr;
+    if (GIRBAL_anchor_distances_sub.updated()) {
+        PX4_INFO("ENTERED FIRST LOOP");
+
+        // initialising distPtr using structure defined in GIRBAL_anchor_distances.msg
+        // int32[4] anchor_id
+        // float32[4] anchor_pos_x
+        // float32[4] anchor_pos_y
+        // float32[4] anchor_pos_z
+        // float32[4] distance
+        struct GIRBAL_anchor_distances_s distPtr; // still can't find documentation on how _s affects code/copies inputs
+
+        // initialising 3 COORDS structures to copy info into, and enter into function
+        struct COORDS p1,p2,p3,*P1,*P2,*P3;
+        P1 = &p1; P2 = &p2; P3 = &p3;
+
+        // initialising COORDS structure to output result
+        struct COORDS pt, *PT;
+        PT = &pt;
 
 		if (GIRBAL_anchor_distances_s.copy(&distPtr)) {
+            PX4_INFO("ENTERED SECOND LOOP");
+            // copying input into the new COORDS structures
+            P1->x = distPtr.anchor_pos_x[0];
+            P1->y = distPtr.anchor_pos_y[0];
+            P1->z = distPtr.anchor_pos_z[0];
+            P1->r = distPtr.distance[0];
 
+            P2->x = distPtr.anchor_pos_x[1];
+            P2->y = distPtr.anchor_pos_y[1];
+            P2->z = distPtr.anchor_pos_z[1];
+            P2->r = distPtr.distance[1];
 
+            P3->x = distPtr.anchor_pos_x[2];
+            P3->y = distPtr.anchor_pos_y[2];
+            P3->z = distPtr.anchor_pos_z[2];
+            P3->r = distPtr.distance[2];
+
+            *PT = trilateration(P1,P2,P3);
+            // WRITE A FUNCTION TO PUBLISH COORDS, same as line 119 in GIRBAL_Sim_Driver.cpp
+            publishCoords(PT);
 		}
 	}
+    perf_end(_loop_perf);
 }
 
+void GIRBAL_Position_Calc::publishCoords(COORDS* PT) {
+    // followed code in GIRBAL_Sim_Driver by adding _s after the message name, but can't find documentation
+    // don't know if this works
+    struct GIRBAL_vehicle_pos_s pos;
+    PX4_INFO("ENTERED PUBLISH FUNCTION");
 
+    memset(&pos,0,sizeof(pos));
+    // can't find documentation of orb_advert_t structure and orb_advertise function
+    // copied from GIRBAL_Sim_Driver
+    orb_advert_t pos_pub = orb_advertise(ORB_ID(GIRBAL_vehicle_pos), &pos);
 
-COORDS GIRBAL_Position_Calc::calculateIntersection(double x1, double y1, double r1, double x2, double y2, double r2)
-{
-    COORDS intersection;
+    // copying over information
+    pos.timestamp = hrt_absolute_time(); // log start time
+    pos.vehicle_pos_x = PT->x;
+    pos.vehicle_pos_y = PT->y;
+    pos.vehicle_pos_z = PT->z;
 
-    //1. same circle
-    if (x1 == x2 && y1 == y2 && r1 == r2)
-    {
-        return intersection;
-    }
-
-    double distance = sqrt(pow(x1 - x2, 2) + pow(y1 - y2, 2));
-
-    //2. too far away
-    if (distance > r1 + r2)
-    {
-        return intersection;
-    }
-
-    double xx = (pow(r1, 2) - pow(r2, 2) + pow(distance, 2)) / (2 * distance);
-    double yy = sqrt(pow(r1, 2) - pow(xx, 2));
-
-    //3. one circle inside the other
-    if (r1 < abs(xx) || distance < abs(r2 - r1))
-    {
-        return intersection;
-    }
-
-
-    COORDS v;
-    v.x = x2 - x1;
-    v.y = y2 - y1;
-
-    COORDS A;
-    A.x = x1;
-    A.y = y1;
-
-    COORDS e1;
-    e1.x = (1 / distance) * v.x;
-    e1.y = (1 / distance) * v.y;
-
-    //4a. 1 solution
-    if (yy == 0)
-    {
-        COORDS p;
-        p.x = A.x + xx * e1.x;
-        p.y = A.y + xx * e1.y;
-
-        intersection = p;
-
-        return intersection;
-    }
-
-    //4b. 2 solutions
-    Matrix2d rot;       // NOT SURE HOW WE CAN DO THIS USING GIRBAL STRUCTS
-    rot(0, 0) = 0;      // might have to use vectors instead of structs?
-    rot(0, 1) = -1;     // or maybe we can decompose this into x and y components and multiply accordingly
-    rot(1, 0) = 1;      // from here down code is unchanged
-    rot(1, 1) = 0;
-
-    COORDS e2;
-    e2 = rot * e1;
-
-    Vector2d p1 = A + xx * e1 + yy * e2;
-    Vector2d p2 = A + xx * e1 - yy * e2;
-
-    return answer.pushback()
-
+    orb_publish(ORB_ID(GIRBAL_vehicle_pos), pos_pub, &pos); // can't seem to find documentation on orb_publish
+    //_GIRBAL_vehicle_pos_pub.publish(pos);
+    // ^^ from line 124 in https://github.com/PX4/PX4-Autopilot/blob/master/src/examples/work_item/WorkItemExample.cpp
+    // these lines were copied from GIRBAL_Sim_Driver, but not sure which one's supposed to work
 }
 
-
-
-// formula can be found: https://www.xarg.org/2016/07/calculate-the-intersection-points-of-two-circles/
-COORDS* GIRBAL_Position_Calc::calculateIntersections(COORDS_DIST* circles)
-{
-    int circleCount = sizeof(circles);
-    COORDS ans;
-
-    for (int i = 0; i < circleCount - 1;++i)
-    {
-        COORDS_DIST circle1 = circles[i];
-
-        for (int j = i + 1; j < circleCount;++j)
-        {
-            COORDS_DIST circle2 = circles[j];
-            COORDS solution = calculateIntersection(circle1.coords.x, circle1.coords.y, circle1.radius, circle2.coords.x, circle2.coords.y, circle2.radius);
-
-            if (solution.size() == 1) // won't be able to use that on struct
-            {
-                Vector2d row = CalculateIntersection(circle1, circle2)[0];
-                ans.push_back(row);
-            }
-
-            if (solution.size() == 2)
-            {
-                Vector2d row1 = CalculateIntersection(circle1, circle2)[0];
-                Vector2d row2 = CalculateIntersection(circle1, circle2)[1];
-
-                ans.push_back(row1);
-                ans.push_back(row2);
-            }
-        }
-
-    }
-    return ans;
+// function that calculates the dot product of two COORD structures, used in 'trilateration' function
+double dotProduct(COORDS* A, COORDS* B) {
+    double product = (A->x) * (B->x) + (A->y) * (B->y) + (A->z) * (B->z);
+    return product;
 }
 
-// modified from: https://stackoverflow.com/questions/2792443/finding-the-centroid-of-a-polygon
-// formula can be found: https://en.wikipedia.org/wiki/Centroid#Of_a_polygon
-COORDS GIRBAL_Position_Calc::polygonCalcCentre(COORDS vertices[])
-{
-    int vertexCount = sizeof(vertices)/sizeof(vertices[0]);
-
-    COORDS centroid = {0, 0};
-    double signedArea = 0.0;
-    double x0 = 0.0; // Current vertex X
-    double y0 = 0.0; // Current vertex Y
-    double x1 = 0.0; // Next vertex X
-    double y1 = 0.0; // Next vertex Y
-    double a = 0.0;  // Partial signed area
-
-    // For all vertices except last
-    for (int i=0; i<vertexCount-1; ++i)
-    {
-        x0 = vertices[i].x;
-        y0 = vertices[i].y;
-        x1 = vertices[i+1].x;
-        y1 = vertices[i+1].y;
-        a = x0*y1 - x1*y0;
-        signedArea += a;
-        centroid.x += (x0 + x1)*a;
-        centroid.y += (y0 + y1)*a;
-    }
-
-    // Do last vertex separately to avoid performing an expensive modulus operation in each iteration.
-    x0 = vertices[i].x;
-    y0 = vertices[i].y;
-    x1 = vertices[0].x;
-    y1 = vertices[0].y;
-    a = x0*y1 - x1*y0;
-    signedArea += a;
-    centroid.x += (x0 + x1)*a;
-    centroid.y += (y0 + y1)*a;
-
-    signedArea *= 0.5;
-    centroid.x /= (6.0*signedArea);
-    centroid.y /= (6.0*signedArea);
-    centroid.z = 0; // not using 3D in this implementation, so set Z to zero
-
-    return centroid;
+// function that calculates the cross product of two COORD structures, used in 'trilateration' function
+void crossProduct(COORDS* A, COORDS* B, COORDS* P) {
+    P->x = A->y * B->z - A->z * B->y;
+    P->y = A->z * B->x - A->x * B->z;
+    P->z = A->x * B->y - A->y * B->x;
 }
 
-/*
-Pos2dVec Trilateration::CalculateIntersection(PosAndDistance2d c1, PosAndDistance2d c2)
-{
-    double x1 = c1.m_pos(0);
-    double y1 = c1.m_pos(1);
-    double r1 = c1.m_distance;
+// takes the coordinates of 3 nodes and performs trilateration to locate the drone
+COORDS GIRBAL_Position_Calc::trilateration(COORDS* P1, COORDS* P2, COORDS* P3) {
 
-    double x2 = c2.m_pos(0);
-    double y2 = c2.m_pos(1);
-    double r2 = c2.m_distance;
+    // Redefine anchor node coordinates with P1 (the first anchor node) as the origin
+    COORDS p1a, p2a, p3a, *P1a, *P2a, *P3a;
+    P1a = &p1a; P2a = &p2a; P3a = &p3a;
 
-    Pos2dVec a;
+    P1a->x = P1->x - P1->x;
+    P1a->y = P1->y - P1->y;
+    P1a->z = P1->z - P1->z;
 
+    P2a->x = P2->x - P1->x;
+    P2a->y = P2->y - P1->y;
+    P2a->z = P2->z - P1->z;
 
-    //1. same circle
-    if (x1 == x2 && y1 == y2 && r1 == r2)
-    {
-        return a;
-    }
+    P3a->x = P3->x - P1->x;
+    P3a->y = P3->y - P1->y;
+    P3a->z = P3->z - P1->z;
 
-    double distance = sqrt(pow(x1 - x2, 2) + pow(y1 - y2, 2));
-    //2. too far away
-    if (distance > r1 + r2)
-    {
-        return a;
-    }
+    // 2. rotate P2 and P3 so that P2 only has an x component
+    //    new x coordinate of P2 can be found via pythagoras - sqrt( (p2x-p1x)^2 + (p2y-p1y)^2 + (p2z-p1z)^2 ),
+    //    modified source code from https://gis.stackexchange.com/questions/66/trilateration-using-3-latitude-longitude-points-and-3-distances
 
-    double xx = (pow(r1, 2) - pow(r2, 2) + pow(distance, 2)) / (2 * distance);
-    double yy = sqrt(pow(r1, 2) - pow(xx, 2));
+    double d  = sqrt(pow(P2a->x,2) + pow(P2a->y,2) + pow(P2a->z,2));  // distance from origin to P2a
+    COORDS ex, *EX;
+    EX = &ex;                                                         // unit x vector (in direction of P2a)
+    EX->x = (P2a->x) / d;
+    EX->y = (P2a->y) / d;
+    EX->z = (P2a->z) / d;
+    double i  = dotProduct(EX, P3a);                                  // x coordinate for rotated P3
+    double ey_denom = sqrt( pow(P3a->x - i*(EX->x),2) + pow(P3a->y - i*(EX->y),2) + pow(P3a->z - i*(EX->z),2) );
+    COORDS ey, *EY;                                                   // unit y vector i think?? not sure what the fancy i*ex is for
+    EY = &ey;
+    EY->x = (P3a->x - i*EX->x) / ey_denom;
+    EY->y = (P3a->y - i*EX->y) / ey_denom;
+    EY->z = (P3a->z - i*EX->z) / ey_denom;
 
-    //3. one circle inside the other
-    if (r1 < abs(xx) || distance < abs(r2 - r1))
-    {
-        return a;
-    }
+    double j  = dotProduct(EY, P3a);                                  // y coordinate for rotated P3
+    COORDS ez, *EZ;
+    crossProduct(EX, EY, EZ);                                         // unit z vector
 
+    // 3. using previous calculations to work out x,y,z coordinates of the drone, in our newly defined coordinate system
+    //    modified source code from https://en.wikipedia.org/wiki/True-range_multilateration#Three_Cartesian_dimensions,_three_measured_slant_ranges
+    double x = ( pow(P1->r,2) - pow(P2->r,2) + pow(d,2) ) / (2*d);
+    double y = ( pow(P1->r,2) - pow(P3->r,2) + pow(i,2) + pow(j,2) )/(2*j) - ((i/j)*x);
+    double z = sqrt(pow(P1->r,2) - pow(x,2) - pow(y,2)); // only one case shown here - could be the negative square root??
 
-    Vector2d v;
-    v(0) = x2 - x1;
-    v(1) = y2 - y1;
+    // 4. return triPt - a COORDS structure with ECEF x,y,z of trilateration point
+    //    converts from the newly defined coordinate system back to the original coordinate system
+    COORDS tri_pt, *triPt;
+    triPt = &tri_pt;
+    triPt->x = P1->x + x*(EX->x) + y*(EY->x) + z*(EZ->x);
+    triPt->y = P1->y + x*(EX->y) + y*(EY->y) + z*(EZ->y);
+    triPt->z = P1->z + x*(EX->z) + y*(EY->z) + z*(EZ->z);
 
-    Vector2d A;
-    A(0) = x1;
-    A(1) = y1;
+    // USED TO CHECK RESULTS (not passed on through the function) convert back to lat/long from ECEF
+    // int earthR = 6371;
+    // double pi = 2*acos(0.0);
 
-    Vector2d e1 = (1 / distance) * v;
+    // double lat = (asin(triPt->z / earthR)) * (180/pi);
+    // double lon = (atan2(triPt->y, triPt->x)) * (180/pi);
 
-    //4a. 1 solution
-    if (yy == 0)
-    {
-        Vector2d p = A + xx * e1;
-        a.push_back(p);
-        return a;
-    }
-
-    //4b. 2 solutions
-    Matrix2d rot;
-    rot(0, 0) = 0;
-    rot(0, 1) = -1;
-    rot(1, 0) = 1;
-    rot(1, 1) = 0;
-
-    Vector2d e2 = rot * e1;
-
-    Vector2d p1 = A + xx * e1 + yy * e2;
-    Vector2d p2 = A + xx * e1 - yy * e2;
-
-    a.push_back(p1);
-    a.push_back(p2);
-
-    return a;
-
-
+    return *triPt;
 }
-
-Pos2dVec Trilateration::CalculateIntersections(PosAndDistance2dVec circles)
-{
-    int count = circles.size();
-    Pos2dVec ans;
-
-    for (int i = 0; i < count - 1;++i)
-    {
-        PosAndDistance2d circle1 = circles[i];
-
-        for (int j = i + 1; j < count; ++j)
-        {
-            PosAndDistance2d circle2 = circles[j];
-
-            Pos2dVec solution = CalculateIntersection(circle1, circle2);
-
-            if (solution.size() == 1)
-            {
-                Vector2d row = CalculateIntersection(circle1, circle2)[0];
-                ans.push_back(row);
-            }
-
-            if (solution.size() == 2)
-            {
-                Vector2d row1 = CalculateIntersection(circle1, circle2)[0];
-                Vector2d row2 = CalculateIntersection(circle1, circle2)[1];
-
-                ans.push_back(row1);
-                ans.push_back(row2);
-            }
-
-        }
-    }
-    return ans;
-}
-*/
 
 extern "C" __EXPORT int work_item_example_main(int argc, char *argv[]) // not really sure what this func does tbh
 {
