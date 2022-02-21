@@ -44,7 +44,7 @@ void GIRBAL_Position_Calc::Run()
 
     // "work" happens here on distances callback
     if (GIRBAL_anchor_distances_sub.updated()) {
-        PX4_INFO("ENTERED FIRST LOOP");
+        PX4_INFO("UPDATING ANCHOR DISTANCES");
 
         // initialising distPtr using structure defined in GIRBAL_anchor_distances.msg
         // int32[4] anchor_id
@@ -63,7 +63,7 @@ void GIRBAL_Position_Calc::Run()
         PT = &pt;
 
 		if (GIRBAL_anchor_distances_s.copy(&distPtr)) {
-            PX4_INFO("ENTERED SECOND LOOP");
+            PX4_INFO("COPYING NEW DATA INTO STRUCTURES");
             // copying input into the new COORDS structures
             P1->x = distPtr.anchor_pos_x[0];
             P1->y = distPtr.anchor_pos_y[0];
@@ -92,7 +92,7 @@ void GIRBAL_Position_Calc::publishCoords(COORDS* PT) {
     // followed code in GIRBAL_Sim_Driver by adding _s after the message name, but can't find documentation
     // don't know if this works
     struct GIRBAL_vehicle_pos_s pos;
-    PX4_INFO("ENTERED PUBLISH FUNCTION");
+    PX4_INFO("PUBLISHING VEHICLE POSITION");
 
     memset(&pos,0,sizeof(pos));
     // can't find documentation of orb_advert_t structure and orb_advertise function
