@@ -204,6 +204,7 @@ int GIRBAL_Sim_Driver::task_spawn(int argc, char *argv[])
 
 int GIRBAL_Sim_Driver::print_status()
 {
+    PX4_INFO("Running GIRBAL_Sim_Driver");
 	perf_print_counter(_loop_perf);
 	perf_print_counter(_loop_interval_perf);
 	return 0;

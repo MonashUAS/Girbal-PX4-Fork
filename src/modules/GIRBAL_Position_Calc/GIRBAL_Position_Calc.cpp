@@ -1,19 +1,20 @@
 #include "GIRBAL_Position_Calc.hpp"
 
+// 1. Add the module to the wq_configureations::nav_and_controllers queue
 GIRBAL_Position_Calc::GIRBAL_Position_Calc() :
     ModuleParams(nullptr),
-    ScheduledWorkItem(MODULE_NAME, px4::wq_configurations::test1) // no idea what this is and can't find documentation for it
+    ScheduledWorkItem(MODULE_NAME, px4::wq_configurations::nav_and_controllers)
 {
-
 }
 
-// I assume this is the destructor?
+// 2. Destructor
 GIRBAL_Position_Calc::~GIRBAL_Position_Calc()
 {
     perf_free(_loop_perf);
 	perf_free(_loop_interval_perf);
 }
 
+// 3. Initialisation
 bool GIRBAL_Position_Calc::init()
 {
     // execute Run() on every gps publication
@@ -28,6 +29,7 @@ bool GIRBAL_Position_Calc::init()
     return true;
 }
 
+// 4. Run code
 void GIRBAL_Position_Calc::Run()
 {
     PX4_INFO("RUN FUNCTION ENTERED");
@@ -37,12 +39,20 @@ void GIRBAL_Position_Calc::Run()
         return;
     }
 
-    // defined in destructor(?) near the start
+    // defined in destructor near the start
     perf_begin(_loop_perf);
 	perf_count(_loop_interval_perf);
 
+    // Check if parameters have changed
+    // https://docs.px4.io/master/en/advanced/parameters_and_configurations.html
+	if (_parameter_update_sub.updated()) {
+		// clear update
+		parameter_update_s param_update;
+		_parameter_update_sub.copy(&param_update);
+		updateParams(); // update module parameters (in DEFINE_PARAMETERS)
+	}
 
-    // "work" happens here on distances callback
+    // Recalculate position every time the anchor_distances_sub parameter updates
     if (GIRBAL_anchor_distances_sub.updated()) {
         PX4_INFO("UPDATING ANCHOR DISTANCES");
 
@@ -55,11 +65,11 @@ void GIRBAL_Position_Calc::Run()
         struct GIRBAL_anchor_distances_s distPtr; // still can't find documentation on how _s affects code/copies inputs
 
         // initialising 3 COORDS structures to copy info into, and enter into function
-        struct COORDS p1,p2,p3,*P1,*P2,*P3;
+        COORDS p1,p2,p3,*P1,*P2,*P3;
         P1 = &p1; P2 = &p2; P3 = &p3;
 
         // initialising COORDS structure to output result
-        struct COORDS pt, *PT;
+        COORDS pt, *PT;
         PT = &pt;
 
 		if (GIRBAL_anchor_distances_s.copy(&distPtr)) {
@@ -88,6 +98,7 @@ void GIRBAL_Position_Calc::Run()
     perf_end(_loop_perf);
 }
 
+// 5. Publish results
 void GIRBAL_Position_Calc::publishCoords(COORDS* PT) {
     // followed code in GIRBAL_Sim_Driver by adding _s after the message name, but can't find documentation
     // don't know if this works
@@ -125,7 +136,7 @@ void crossProduct(COORDS* A, COORDS* B, COORDS* P) {
 }
 
 // takes the coordinates of 3 nodes and performs trilateration to locate the drone
-COORDS GIRBAL_Position_Calc::trilateration(COORDS* P1, COORDS* P2, COORDS* P3) {
+COORDS GIRBAL_Position_Calc::trilateration COORDS* P1, COORDS* P2, COORDS* P3) {
 
     // Redefine anchor node coordinates with P1 (the first anchor node) as the origin
     COORDS p1a, p2a, p3a, *P1a, *P2a, *P3a;
@@ -187,6 +198,59 @@ COORDS GIRBAL_Position_Calc::trilateration(COORDS* P1, COORDS* P2, COORDS* P3) {
     // double lon = (atan2(triPt->y, triPt->x)) * (180/pi);
 
     return *triPt;
+}
+
+// Specify that the task is part of the work queue
+int GIRBAL_Position_Calc::task_spawn(int argc, char *argv[]) {
+	//WorkItemExample *instance = new WorkItemExample();
+    GIRBAL_Sim_Driver *instance  = new GIRBAL_Position_Calc();
+
+	if (instance) {
+		_object.store(instance);
+		_task_id = task_id_is_work_queue;
+
+		if (instance->init()) {
+			return PX4_OK;
+		}
+
+	} else {
+		PX4_ERR("alloc failed");
+	}
+
+	delete instance;
+	_object.store(nullptr);
+	_task_id = -1;
+
+	return PX4_ERROR;
+}
+
+int GIRBAL_Position_Calc::print_status() {
+    PX4_INFO("Running GIRBAL_Position_Calc");
+	perf_print_counter(_loop_perf);
+	perf_print_counter(_loop_interval_perf);
+	return 0;
+}
+
+int GIRBAL_Position_Calc::custom_command(int argc, char *argv[]) {
+	return print_usage("unknown command");
+}
+
+int GIRBAL_Position_Calc::print_usage(const char *reason) {
+	if (reason) {
+		PX4_WARN("%s\n", reason);
+	}
+
+	PRINT_MODULE_DESCRIPTION(
+		R"DESCR_STR(
+### Description
+GIRBAL simulated module 2.
+)DESCR_STR");
+
+	PRINT_MODULE_USAGE_NAME("GIRBAL_Position_Calc", "template");
+	PRINT_MODULE_USAGE_COMMAND("start");
+	PRINT_MODULE_USAGE_DEFAULT_COMMANDS();
+
+	return 0;
 }
 
 extern "C" __EXPORT int work_item_example_main(int argc, char *argv[]) // not really sure what this func does tbh
