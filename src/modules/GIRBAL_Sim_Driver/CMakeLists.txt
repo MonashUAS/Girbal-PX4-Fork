@@ -8,8 +8,7 @@ COMPILE_FLAGS
     #-DDEBUG_BUILD   # uncomment for PX4_DEBUG output
     #-O0             # uncomment when debugging
 SRCS
-    GIRBAL_Sim_Driver.cpp
-    GIRBAL_Sim_Driver.hpp
+    GIRBAL_Sim_Driver.c
 DEPENDS
     px4_work_queue
 )

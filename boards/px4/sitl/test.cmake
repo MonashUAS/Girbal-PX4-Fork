@@ -35,6 +35,7 @@ px4_add_board(
 		flight_mode_manager
 		fw_att_control
 		fw_pos_control_l1
+		GIRBAL_Sim_Driver
 		gyro_calibration
 		gyro_fft
 		land_detector
