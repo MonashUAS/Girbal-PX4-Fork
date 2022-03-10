@@ -1,11 +1,21 @@
 #include "GIRBAL_Position_Calc.hpp"
+#include <px4_platform_common/px4_config.h>
+#include <px4_platform_common/tasks.h>
+#include <px4_platform_common/posix.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <poll.h>
+#include <string.h>
+#include <math.h>
 
-// 1. Add the module to the wq_configureations::nav_and_controllers queue
-GIRBAL_Position_Calc::GIRBAL_Position_Calc() :
-    ModuleParams(nullptr),
-    ScheduledWorkItem(MODULE_NAME, px4::wq_configurations::nav_and_controllers)
-{
-}
+__EXPORT int GIRBAL_Position_Calc_main(int argc, char *argv[]);
+
+// // 1. Add the module to the wq_configureations::nav_and_controllers queue
+// GIRBAL_Position_Calc::GIRBAL_Position_Calc() :
+//     ModuleParams(nullptr),
+//     ScheduledWorkItem(MODULE_NAME, px4::wq_configurations::nav_and_controllers)
+// {
+//}
 
 // 2. Destructor
 GIRBAL_Position_Calc::~GIRBAL_Position_Calc()
@@ -15,19 +25,19 @@ GIRBAL_Position_Calc::~GIRBAL_Position_Calc()
 }
 
 // 3. Initialisation
-bool GIRBAL_Position_Calc::init()
-{
-    // execute Run() on every gps publication
-    if (!sensor_gps_s.registerCallback()) {
-        PX4_ERR("GPS data callback registration failed");
-        return false;
-    }
+// bool GIRBAL_Position_Calc::init()
+// {
+//     // execute Run() on every gps publication
+//     if (!sensor_gps_s.registerCallback()) {
+//         PX4_ERR("GPS data callback registration failed");
+//         return false;
+//     }
 
-    // alternatively, Run on fixed interval
-    // ScheduleOnInterval(5000_us); // 2000 us interval, 200 Hz rate
+//     // alternatively, Run on fixed interval
+//     // ScheduleOnInterval(5000_us); // 2000 us interval, 200 Hz rate
 
-    return true;
-}
+//     return true;
+// }
 
 // 4. Run code
 void GIRBAL_Position_Calc::Run()
@@ -43,14 +53,6 @@ void GIRBAL_Position_Calc::Run()
     perf_begin(_loop_perf);
 	perf_count(_loop_interval_perf);
 
-    // Check if parameters have changed
-    // https://docs.px4.io/master/en/advanced/parameters_and_configurations.html
-	if (_parameter_update_sub.updated()) {
-		// clear update
-		parameter_update_s param_update;
-		_parameter_update_sub.copy(&param_update);
-		updateParams(); // update module parameters (in DEFINE_PARAMETERS)
-	}
 
     // Recalculate position every time the anchor_distances_sub parameter updates
     if (GIRBAL_anchor_distances_sub.updated()) {
@@ -72,7 +74,7 @@ void GIRBAL_Position_Calc::Run()
         COORDS pt, *PT;
         PT = &pt;
 
-		if (GIRBAL_anchor_distances_s.copy(&distPtr)) {
+		if (GIRBAL_anchor_distances_sub.copy(&distPtr)) {
             PX4_INFO("COPYING NEW DATA INTO STRUCTURES");
             // copying input into the new COORDS structures
             P1->x = distPtr.anchor_pos_x[0];
@@ -123,7 +125,7 @@ void GIRBAL_Position_Calc::publishCoords(COORDS* PT) {
 }
 
 // function that calculates the dot product of two COORD structures, used in 'trilateration' function
-double dotProduct(COORDS* A, COORDS* B) {
+double dotProduct(struct COORDS* A,struct  COORDS* B) {
     double product = (A->x) * (B->x) + (A->y) * (B->y) + (A->z) * (B->z);
     return product;
 }
@@ -224,36 +226,16 @@ int GIRBAL_Position_Calc::task_spawn(int argc, char *argv[]) {
 	return PX4_ERROR;
 }
 
-int GIRBAL_Position_Calc::print_status() {
-    PX4_INFO("Running GIRBAL_Position_Calc");
-	perf_print_counter(_loop_perf);
-	perf_print_counter(_loop_interval_perf);
-	return 0;
-}
 
-int GIRBAL_Position_Calc::custom_command(int argc, char *argv[]) {
-	return print_usage("unknown command");
-}
 
-int GIRBAL_Position_Calc::print_usage(const char *reason) {
-	if (reason) {
-		PX4_WARN("%s\n", reason);
-	}
 
-	PRINT_MODULE_DESCRIPTION(
-		R"DESCR_STR(
-### Description
-GIRBAL simulated module 2.
-)DESCR_STR");
 
-	PRINT_MODULE_USAGE_NAME("GIRBAL_Position_Calc", "template");
-	PRINT_MODULE_USAGE_COMMAND("start");
-	PRINT_MODULE_USAGE_DEFAULT_COMMANDS();
+
 
 	return 0;
 }
 
-extern "C" __EXPORT int work_item_example_main(int argc, char *argv[]) // not really sure what this func does tbh
+extern "C" __EXPORT int GIRBAL_Position_Calc_main(int argc, char *argv[]) // not really sure what this func does tbh
 {
     return GIRBAL_Position_Calc::main(argc, argv);
 }

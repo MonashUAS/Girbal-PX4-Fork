@@ -14,9 +14,8 @@
 #include <uORB/Publication.hpp>
 #include <uORB/Subscription.hpp>
 #include <uORB/SubscriptionCallback.hpp>
-#include <uORB/topics/GIRBAL_anchor_distances.h> // these are auto generated when the program is built (based on our msg definitions)
-#include <uORB/topics/GIRBAL_vehicle_pos.h>
-#include <uORB/topics/parameter_update.h>
+#include <uORB/topics/GIRBAL_anchor_distances.h> 
+#include <uORB/topics/GIRBAL_vehicle_pos.h> // these are auto generated when the program is built (based on our msg definitions)
 
 //#include <uORB/topics/orb_test.h>
 //#include <uORB/topics/parameter_update.h>
@@ -70,7 +69,7 @@ private:
     void Run() override; // callback func
 
     // Publications
-	uORB::Publication<GIRBAL_vehicle_pos_s> _anchor_distance_pub{ORB_ID(GIRBAL_vehicle_pos)};
+	uORB::Publication<GIRBAL_vehicle_pos_s>GIRBAL_vechicle_pos_pub{ORB_ID(GIRBAL_vehicle_pos)};
 
     // Subscriptions
     uORB::SubscriptionCallbackWorkItem GIRBAL_anchor_distances_sub{this, ORB_ID(GIRBAL_anchor_distances)};        // subscription that schedules WorkItemExample when updated
