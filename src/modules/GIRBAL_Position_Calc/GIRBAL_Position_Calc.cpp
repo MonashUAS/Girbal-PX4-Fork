@@ -8,14 +8,16 @@
 #include <string.h>
 #include <math.h>
 
-__EXPORT int GIRBAL_Position_Calc_main(int argc, char *argv[]);
+//__EXPORT int GIRBAL_Position_Calc_main(int argc, char *argv[]);
 
-// // 1. Add the module to the wq_configureations::nav_and_controllers queue
-// GIRBAL_Position_Calc::GIRBAL_Position_Calc() :
-//     ModuleParams(nullptr),
-//     ScheduledWorkItem(MODULE_NAME, px4::wq_configurations::nav_and_controllers)
-// {
-//}
+typedef GIRBAL_Position_Calc::COORDS COORDS;
+
+// 1. Add the module to the wq_configureations::nav_and_controllers queue
+GIRBAL_Position_Calc::GIRBAL_Position_Calc() :
+    ModuleParams(nullptr),
+    ScheduledWorkItem(MODULE_NAME, px4::wq_configurations::nav_and_controllers)
+{
+}
 
 // 2. Destructor
 GIRBAL_Position_Calc::~GIRBAL_Position_Calc()
@@ -25,19 +27,19 @@ GIRBAL_Position_Calc::~GIRBAL_Position_Calc()
 }
 
 // 3. Initialisation
-// bool GIRBAL_Position_Calc::init()
-// {
-//     // execute Run() on every gps publication
-//     if (!sensor_gps_s.registerCallback()) {
-//         PX4_ERR("GPS data callback registration failed");
-//         return false;
-//     }
+bool GIRBAL_Position_Calc::init()
+{
+    // // execute Run() on every gps publication
+    // if (!sensor_gps_s.registerCallback()) {
+    //     PX4_ERR("GPS data callback registration failed");
+    //     return false;
+    // }
 
-//     // alternatively, Run on fixed interval
-//     // ScheduleOnInterval(5000_us); // 2000 us interval, 200 Hz rate
+    // alternatively, Run on fixed interval
+    ScheduleOnInterval(5000_us); // 2000 us interval, 200 Hz rate
 
-//     return true;
-// }
+    return true;
+}
 
 // 4. Run code
 void GIRBAL_Position_Calc::Run()
@@ -125,7 +127,7 @@ void GIRBAL_Position_Calc::publishCoords(COORDS* PT) {
 }
 
 // function that calculates the dot product of two COORD structures, used in 'trilateration' function
-double dotProduct(struct COORDS* A,struct  COORDS* B) {
+double dotProduct(COORDS* A, COORDS* B) {
     double product = (A->x) * (B->x) + (A->y) * (B->y) + (A->z) * (B->z);
     return product;
 }
@@ -138,7 +140,7 @@ void crossProduct(COORDS* A, COORDS* B, COORDS* P) {
 }
 
 // takes the coordinates of 3 nodes and performs trilateration to locate the drone
-COORDS GIRBAL_Position_Calc::trilateration COORDS* P1, COORDS* P2, COORDS* P3) {
+COORDS GIRBAL_Position_Calc::trilateration(COORDS* P1, COORDS* P2, COORDS* P3) {
 
     // Redefine anchor node coordinates with P1 (the first anchor node) as the origin
     COORDS p1a, p2a, p3a, *P1a, *P2a, *P3a;
@@ -176,6 +178,7 @@ COORDS GIRBAL_Position_Calc::trilateration COORDS* P1, COORDS* P2, COORDS* P3) {
 
     double j  = dotProduct(EY, P3a);                                  // y coordinate for rotated P3
     COORDS ez, *EZ;
+    EZ = &ez;
     crossProduct(EX, EY, EZ);                                         // unit z vector
 
     // 3. using previous calculations to work out x,y,z coordinates of the drone, in our newly defined coordinate system
@@ -205,7 +208,7 @@ COORDS GIRBAL_Position_Calc::trilateration COORDS* P1, COORDS* P2, COORDS* P3) {
 // Specify that the task is part of the work queue
 int GIRBAL_Position_Calc::task_spawn(int argc, char *argv[]) {
 	//WorkItemExample *instance = new WorkItemExample();
-    GIRBAL_Sim_Driver *instance  = new GIRBAL_Position_Calc();
+    GIRBAL_Position_Calc *instance  = new GIRBAL_Position_Calc();
 
 	if (instance) {
 		_object.store(instance);
@@ -226,14 +229,8 @@ int GIRBAL_Position_Calc::task_spawn(int argc, char *argv[]) {
 	return PX4_ERROR;
 }
 
-
-
-
-
-
-
-	return 0;
-}
+// 	return 0;
+// }
 
 extern "C" __EXPORT int GIRBAL_Position_Calc_main(int argc, char *argv[]) // not really sure what this func does tbh
 {

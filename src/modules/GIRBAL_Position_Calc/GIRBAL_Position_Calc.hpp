@@ -14,7 +14,7 @@
 #include <uORB/Publication.hpp>
 #include <uORB/Subscription.hpp>
 #include <uORB/SubscriptionCallback.hpp>
-#include <uORB/topics/GIRBAL_anchor_distances.h> 
+#include <uORB/topics/GIRBAL_anchor_distances.h>
 #include <uORB/topics/GIRBAL_vehicle_pos.h> // these are auto generated when the program is built (based on our msg definitions)
 
 //#include <uORB/topics/orb_test.h>

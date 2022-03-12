@@ -13,8 +13,9 @@
 
 __EXPORT int GIRBAL_Sim_Driver_main(int argc, char *argv[]);
 
+
 //////////// FUNCTIONS USED IN TRILATERATION //////////
-double dotProduct(COORDS* A, COORDS* B) 
+double dotProduct(COORDS* A, COORDS* B)
 {
     double product = (A->x) * (B->x) + (A->y) * (B->y) + (A->z) * (B->z);
     return product;
@@ -28,7 +29,7 @@ void crossProduct(COORDS* A, COORDS* B, COORDS* P)
     P->z = A->x * B->y - A->y * B->x;
 }
 
-COORDS GIRBAL_Position_Calc::trilateration COORDS* P1, COORDS* P2, COORDS* P3) 
+COORDS GIRBAL_Position_Calc::trilateration COORDS* P1, COORDS* P2, COORDS* P3)
 {
 
     // Redefine anchor node coordinates with P1 (the first anchor node) as the origin
@@ -116,11 +117,11 @@ int GIRBAL_Sim_Driver_main(int argc, char *argv[]) //Main function
 		 * { .fd = other_sub_fd,   .events = POLLIN },
 		 */
 	};
-    
 
 
 
 
-    
+
+
 }
 
